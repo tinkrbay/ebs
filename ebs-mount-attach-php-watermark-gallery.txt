@@ -1,0 +1,121 @@
+Launch an EC2 instance (Amazon Linux 2 AMI) in myvpc1 public-1a subnet with a 8 GiB root volume and use the below user data script to populate two applications (static website & php-watermark-gallery)
+
+#!/bin/bash
+sudo yum install httpd php php-gd -y
+sudo service httpd start
+sudo chkconfig httpd on
+cd /home/ec2-user/
+sudo wget https://github.com/tinkrbay/php-watermark-gallery/archive/master.zip
+sudo unzip master.zip
+sudo rm -rf master.zip
+cd /var/www/html/
+sudo mkdir php-watermark-gallery
+sudo mv /home/ec2-user/php-watermark-gallery-master/* /var/www/html/php-watermark-gallery/
+sudo chmod -R 777 /var/www/html
+sudo chown -R apache.apache /var/www/html
+sudo service httpd restart
+
+
+
+Our objective is to have the php-watermark-gallery sub-directory on individual non-root data volumes
+Browse & validate if the application is working as desired
+Create a 1GiB EBS GP2 volume with AZ as us-east-1a and tag (key: Name & value: php-watermark-gallery)
+Attach the 1GiB volume with the name tag php-watermark-gallery to the EC2. Type the device name as /dev/xvdf
+
+Once attached, SSH into the EC2 instance
+
+Issue the commands below to remove the empty directory (nothing basic house-keeping)
+sudo rm -rf /home/ec2-user/php-watermark-gallery-master
+
+Next, Issue the below command to see the current volumes mounted
+
+sudo lsblk
+
+You can observe the output similar to below
+[ec2-user@ip-172-31-78-88 ~]$ sudo lsblk
+NAME    MAJ:MIN RM SIZE RO TYPE MOUNTPOINT
+xvda    202:0    0   8G  0 disk
+└─xvda1 202:1    0   8G  0 part /
+xvdf    202:80   0   1G  0 disk
+
+Observe the output and you will see the new volumes attached but there is no mount-point for the 1GiB volume (in other words there is no directory mounted on them)
+
+There are 4 steps to have our application sub-directory php-watermark-gallery under /var/www/html mounted on the new EBS volume
+
+STEP-1: CREATE A FILESYSTEM ON THE BLANK VOLUME
+sudo mkfs -t ext4 /dev/xvdf
+
+TIP: NEVER RUN A mkfs command on an existing populated volume else it will completely format and erase the entire data
+
+STEP-2: CREATE A BACKUP OF YOUR EXISTING DIRECTORY TO BE MOUNTED
+cd /home/ec2-user/
+sudo mkdir /home/ec2-user/php-watermark-gallery-backup
+sudo mv /var/www/html/php-watermark-gallery/* /home/ec2-user/php-watermark-gallery-backup/
+
+STEP-3 MOUNT THE BLANK SUB-DIRECTORY ONTO THE NEW EBS VOLUMES PERMANENTLY VIA FSTAB FILE (NOTE FSTAB FILE DOES NOT HAVE ANY EXTENSION)
+sudo cp /etc/fstab /home/ec2-user/fstabbackup
+sudo vi /etc/fstab
+
+Press Shift+G and Shift+A keys to arrive at the new last line in the fstab file
+On the last line you need to be enter the below new mount entries
+NOTE: 
+THAT FSTAB IS A TAB SEPARATED VALUE SET. THIS MEANS THE GAP BETWEEN EACH TERM IS A TAB KEY. DONT TRY TO ALIGN THINGS BY HITTING SPACE BAR...
+DONT WORRY ABOUT THE AMOUNT OF UNEVEN GAPS SEEN ON THE CONSOLE
+
+/dev/xvdf	/var/www/html/php-watermark-gallery/	ext4	defaults,nofail	0	2
+
+Save and exit the fstab file (Esc + Shift : + wq!)
+
+Issue the below command to mount the volume
+
+sudo mount -a
+
+Issue the below command to now observe the block device details
+
+sudo lsblk
+
+You will see that mount point for /dev/xvdf as php-watermark-gallery. This means whatever you read/write into this directory will be stored on the 1GiB volume
+
+STEP-4 RESTORE THE BACKUP INTO THE NEWLY MOUNTED SUB-DIRECTORY 
+
+cd /home/ec2-user/
+sudo mv php-watermark-gallery-backup/* /var/www/html/php-watermark-gallery/
+sudo service httpd restart
+
+Browse your IP address and validate the applications
+
+Now if you ever wanted to detatch this volume. First you have to properly unmount the volumes by issuing the commands
+sudo umount /dev/xvdf
+
+If you want to mount it again
+sudo mount -a
+
+NEW SCENARIO: Assuming that your Enterprise has laid out a new security policy to have all volumes encrypted
+
+Brief steps of encrypting an existing EBS data volume attached to an EC2 instance
+
+ROOT VOLUME:
+unencrypted ROOT volume > create snapshot > result: unencrypted snapshot > copy snapshot > toggle encryption settings > encrypted snapshot created > create volume from encrypted snapshot > result: new encrypted volume > STOP THE EC2 instance > detach unencrypted ROOT volume > attach newly created encrypted volume on /dev/xvda device name > START THE EC2 instance
+
+DATA VOLUMES
+
+unencrypted volume > create snapshot > result: unencrypted snapshot > copy snapshot > toggle encryption settings > encrypted snapshot created > create volume from encrypted snapshot > result: new encrypted volume > unmount unencrypted volume (the command would be sudo umount device-name-to-be-unmounted > detach unencrypted volume > attach newly created encrypted volume > no need to edit fstab (as fstab entries are still valid if attachment is done on same device name) > execute mount -a command
+
+
+AT THIS STAGE YOU WILL HAVE 
+
+1x8GiB unencrypted root volume in us-east-1a
+1x8GiB encrypted root volume in us-east-1a
+1x1GiB volumes (unencrypted) in us-east-1a
+1x1GiB volumes (encrypted) in us-east-1a
+
+In addition, you will have the below snapshots. NOTE: SNAPSHOTS ARE AVAILABLE ACROSS THE ENTIRE REGION AS OPPOSED TO EBS VOLUMES WHICH ARE IN AZ.
+
+1x8GiB root volume snapshot (unencrypted) in us-east-1
+1x8GiB root volume snapshot (encrypted) in us-east-1
+1x1GiB snapshots (unencrypted) in us-east-1 
+1x1GiB snapshots (encrypted) in us-east-1 
+
+You can experiment further if required to create volumes from these snapshots in any Availability zone within us-east-1
+Once you have created volumes from these snapshots, they consist of the snapshot data (eitehr encrypted or unencrypted)
+You can then use the same procedure above (without mkfs) to attach and mount these as data volumes on other EC2 instances
