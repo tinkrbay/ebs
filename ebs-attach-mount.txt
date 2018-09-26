@@ -1,4 +1,4 @@
-Launch an EC2 instance in myvpc1 public-1a subnet with a 8 GiB root volume and use the below user data script to populate two applications (static website & php-watermark-gallery)
+Launch an EC2 instance (Amazon Linux 2 AMI) in myvpc1 public-1a subnet with a 8 GiB root volume and use the below user data script to populate two applications (static website & php-watermark-gallery)
 
 #!/bin/bash
 sudo yum install httpd php php-gd -y
