@@ -100,6 +100,13 @@ sudo service httpd restart
 
 Browse your IP address and validate the applications
 
+Now if you ever wanted to detatch these volumes. First you have to properly unmount the volumes by issuing the commands
+sudo umount /dev/xvdf
+sudo umount /dev/xvdg
+
+If you want to mount them again
+sudo mount -a
+
 NEW SCENARIO: Assuming that your Enterprise has laid out a new security policy to have all volumes encrypted
 
 Brief steps of encrypting an existing EBS data volume attached to an EC2 instance
