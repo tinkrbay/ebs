@@ -1,0 +1,76 @@
+Launch an EC2 instance in myvpc1 public-1a subnet with a 8 GiB root volume and use the below user data script to populate two applications (static website & php-watermark-gallery)
+
+#!/bin/bash
+sudo yum install httpd php php-gd -y
+sudo service httpd start
+sudo chkconfig httpd on
+cd /home/ec2-user/
+sudo wget https://github.com/tinkrbay/php-watermark-gallery/archive/master.zip
+sudo unzip master.zip
+cd /var/www/html/
+sudo mkdir php-watermark-gallery
+sudo mv /home/ec2-user/php-watermark-gallery-master/* /var/www/html/php-watermark-gallery/
+sudo chmod -R 777 /var/www/html
+sudo chown -R apache.apache /var/www/html
+sudo service httpd restart
+
+
+Our objective is to have the staticwebsite & php-watermark-gallery sub-directories on individual non-root data volumes
+Browse & validate if the applications are working as desired
+Create two new EBS volumes in us-east-1a each of 1GiB and GP2 type
+Attach these two new volumes to the running EC2 instance launched above
+Once attached, SSH into the EC2 instance
+Issue the below command to see the current volumes mounted
+
+sudo lsblk
+
+Observe the output and you will see the new volumes attached but there is no mount-point (in other words there is no directory mounted on them)
+
+There are 4 steps to have our sub-directories mounted on the new EBS volumes
+
+STEP-1: CREATE A FILESYSTEM ON THESE BLANK VOLUMES
+sudo mkfs -t ext4 device-name-of-1st-data-volume
+sudo mkfs -t ext4 device-name-of-2nd-data-volume
+
+TIP: NEVER RUN A mkfs command on an existing populated volume else it will completely format and erase the entire data
+
+STEP-2: CREATE A BACKUP OF YOUR EXISTING DIRECTORIES TO BE MOUNTED
+cd /home/ec2-user/
+sudo mkdir staticwebsitebackup
+sudo mkdir php-watermark-gallery-backup
+mv /var/www/html/staticwebsite/* /home/ec2-user/staticwebsitebackup/
+mv /var/www/html/php-watermark-gallery/* /home/ec2-user/php-watermark-gallery-backup/
+
+STEP-3 MOUNT THE BLANK SUB-DIRECTORIES ONTO THE NEW EBS VOLUMES PERMANENTLY VIA FSTAB FILE (NOTE FSTAB FILE DOES NOT HAVE ANY EXTENSION)
+sudo cp /etc/fstab /home/ec2-user/fstabbackup
+sudo vi /etc/fstab
+
+Press Shift+G and Shift+A keys to arrive at the new last line in the fstab file
+On the last line you need to be enter the below new mount entries
+NOTE: 
+THAT FSTAB IS A TAB SEPARATED VALUE SET. THIS MEANS YOU SHOULD NOT BLINDLY COPY PASTE THE BELOW LINES
+YOU NEED TO COPY EACH TERM AND THEN HIT A TAB KEY
+DONT WORRY ABOUT THE AMOUNT OF UNEVEN GAPS SEEN ON THE CONSOLE
+
+device-name-of-1st-data-volume	/var/www/html/staticwebsite/	ext4	defaults,nofail	0	2
+device-name-of-1st-data-volume	/var/www/html/php-watermark-gallery/	ext4	defaults,nofail	0	2 
+
+Save and exit the fstab file (Esc + Shift : + wq!)
+
+Issue the below command to mount the devices
+
+sudo mount -a
+
+Issue the below command to now observe the block device details
+
+sudo lsblk
+
+You will see that mount points (respective sub-directories) have been configured for each device
+
+STEP-4 RESTORE THE SUB-DIRECTORY BACKUPS INTO THE NEWLY MOUNTED SUB-DIRECTORIES
+
+cd /home/ec2-user/
+sudo mv staticwebsitebackup/* /var/www/html/staticwebsite/
+sudo mv php-watermark-gallery-backup/* /var/www/html/php-watermark-gallery/
+
+
