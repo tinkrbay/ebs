@@ -73,8 +73,7 @@ sudo vi /etc/fstab
 Press Shift+G and Shift+A keys to arrive at the new last line in the fstab file
 On the last line you need to be enter the below new mount entries
 NOTE: 
-THAT FSTAB IS A TAB SEPARATED VALUE SET. THIS MEANS YOU SHOULD NOT BLINDLY COPY PASTE THE BELOW LINES
-YOU NEED TO COPY EACH TERM AND THEN HIT A TAB KEY
+THAT FSTAB IS A TAB SEPARATED VALUE SET. THIS MEANS THE GAP BETWEEN EACH TERM IS A TAB KEY. DONT TRY TO ALIGN THINGS BY HITTING SPACE BAR...
 DONT WORRY ABOUT THE AMOUNT OF UNEVEN GAPS SEEN ON THE CONSOLE
 
 /dev/xvdf	/var/www/html/staticwebsite/	ext4	defaults,nofail	0	2
