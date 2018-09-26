@@ -5,8 +5,16 @@ sudo yum install httpd php php-gd -y
 sudo service httpd start
 sudo chkconfig httpd on
 cd /home/ec2-user/
+sudo wget https://github.com/tinkrbay/staticwebsite/archive/master.zip
+sudo unzip master.zip
+sudo rm -rf master.zip
+cd /var/www/html/
+sudo mkdir staticwebsite
+sudo mv /home/ec2-user/staticwebsite-master/* /var/www/html/staticwebsite/
+cd /home/ec2-user/
 sudo wget https://github.com/tinkrbay/php-watermark-gallery/archive/master.zip
 sudo unzip master.zip
+sudo rm -rf master.zip
 cd /var/www/html/
 sudo mkdir php-watermark-gallery
 sudo mv /home/ec2-user/php-watermark-gallery-master/* /var/www/html/php-watermark-gallery/
@@ -15,31 +23,48 @@ sudo chown -R apache.apache /var/www/html
 sudo service httpd restart
 
 
+
 Our objective is to have the staticwebsite & php-watermark-gallery sub-directories on individual non-root data volumes
 Browse & validate if the applications are working as desired
-Create two new EBS volumes in us-east-1a each of 1GiB and GP2 type
-Attach these two new volumes to the running EC2 instance launched above
+Create a 1GiB EBS GP2 volume with AZ as us-east-1a and tags (key: Name & value: staticwebsite)
+Create one more 1GiB EBS GP2 volume with AZ as us-east-1a and tag (key: Name & value: php-watermark-gallery)
+Attach the 1GiB volume with name tag staticwebsite to the EC2. Type the device name as /dev/xvdf
+Attach the other 1GiB volume with the name tag php-watermark-gallery to the EC2. Type the device name as /dev/xvdg
+
 Once attached, SSH into the EC2 instance
-Issue the below command to see the current volumes mounted
+
+Issue the commands below to remove empty directories
+sudo rm -rf /home/ec2-user/php-watermark-gallery-master
+sudo rm -rf /home/ec2-user/staticwebsite-master
+
+Next, Issue the below command to see the current volumes mounted
 
 sudo lsblk
 
-Observe the output and you will see the new volumes attached but there is no mount-point (in other words there is no directory mounted on them)
+You can observe the output similar to below
+[ec2-user@ip-172-31-78-88 ~]$ sudo lsblk
+NAME    MAJ:MIN RM SIZE RO TYPE MOUNTPOINT
+xvda    202:0    0   8G  0 disk
+└─xvda1 202:1    0   8G  0 part /
+xvdf    202:80   0   1G  0 disk
+xvdg    202:96   0   1G  0 disk
 
-There are 4 steps to have our sub-directories mounted on the new EBS volumes
+Observe the output and you will see the new volumes attached but there is no mount-point for the 1GiB volumes (in other words there is no directory mounted on them)
+
+There are 4 steps to have our application sub-directories under /var/www/html mounted on the new EBS volumes
 
 STEP-1: CREATE A FILESYSTEM ON THESE BLANK VOLUMES
-sudo mkfs -t ext4 device-name-of-1st-data-volume
-sudo mkfs -t ext4 device-name-of-2nd-data-volume
+sudo mkfs -t ext4 /dev/xvdf
+sudo mkfs -t ext4 /dev/xvdg
 
 TIP: NEVER RUN A mkfs command on an existing populated volume else it will completely format and erase the entire data
 
 STEP-2: CREATE A BACKUP OF YOUR EXISTING DIRECTORIES TO BE MOUNTED
 cd /home/ec2-user/
-sudo mkdir staticwebsitebackup
-sudo mkdir php-watermark-gallery-backup
-mv /var/www/html/staticwebsite/* /home/ec2-user/staticwebsitebackup/
-mv /var/www/html/php-watermark-gallery/* /home/ec2-user/php-watermark-gallery-backup/
+sudo mkdir /home/ec2-user/staticwebsitebackup
+sudo mkdir /home/ec2-user/php-watermark-gallery-backup
+sudo mv /var/www/html/staticwebsite/* /home/ec2-user/staticwebsitebackup/
+sudo mv /var/www/html/php-watermark-gallery/* /home/ec2-user/php-watermark-gallery-backup/
 
 STEP-3 MOUNT THE BLANK SUB-DIRECTORIES ONTO THE NEW EBS VOLUMES PERMANENTLY VIA FSTAB FILE (NOTE FSTAB FILE DOES NOT HAVE ANY EXTENSION)
 sudo cp /etc/fstab /home/ec2-user/fstabbackup
@@ -52,8 +77,8 @@ THAT FSTAB IS A TAB SEPARATED VALUE SET. THIS MEANS YOU SHOULD NOT BLINDLY COPY 
 YOU NEED TO COPY EACH TERM AND THEN HIT A TAB KEY
 DONT WORRY ABOUT THE AMOUNT OF UNEVEN GAPS SEEN ON THE CONSOLE
 
-device-name-of-1st-data-volume	/var/www/html/staticwebsite/	ext4	defaults,nofail	0	2
-device-name-of-1st-data-volume	/var/www/html/php-watermark-gallery/	ext4	defaults,nofail	0	2
+/dev/xvdf	/var/www/html/staticwebsite/	ext4	defaults,nofail	0	2
+/dev/xvdg	/var/www/html/php-watermark-gallery/	ext4	defaults,nofail	0	2
 
 Save and exit the fstab file (Esc + Shift : + wq!)
 
