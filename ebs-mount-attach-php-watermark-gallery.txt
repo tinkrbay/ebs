@@ -92,10 +92,10 @@ sudo mount -a
 
 BEFORE PROCEEDING AHEAD.. LETS CREATE AN AMI with both Root and 1GiB volumes included in the AMI. 
 
-NAME: php-watermark-gallery-unencrypted
-Description: This is the AMI for PHP watermark application with two unencrypted volumes, 8GiB Root and 1GiB hosting the php-watermark-gallery application sub-directory
-Name tag the AMI as php-watermark-gallery-unencrypted
-Name tag the corresponding snapshots as AMI-snapshots-php-watermark-gallery-unencrypted
+NAME: php-watermark-gallery-1
+Description: This is the unencrypted AMI for PHP watermark application with two unencrypted volumes, 8GiB Root and 1GiB hosting the php-watermark-gallery application sub-directory
+Name tag the AMI as php-watermark-gallery-1
+Name tag the corresponding snapshots as php-watermark-gallery-1
 
 
 NEW SCENARIO: Assuming that your Enterprise has laid out a new security policy to have all volumes encrypted
