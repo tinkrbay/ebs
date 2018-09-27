@@ -1,0 +1,17 @@
+NEW SCENARIO: Assuming that your Enterprise has laid out a new security policy to have all volumes encrypted for the application php-watermark-gallery
+
+Launch an EC2 instance using php-watermark-gallery-1 AMI in public-1a subnet of myvpc1
+
+Brief steps of encrypting an existing EBS data volume attached to an EC2 instance
+
+ROOT VOLUME:
+unencrypted ROOT volume > create snapshot > result: unencrypted snapshot > copy snapshot > toggle encryption settings > encrypted snapshot created > create volume from encrypted snapshot > result: new encrypted volume > STOP THE EC2 instance > detach unencrypted ROOT volume > attach newly created encrypted volume on /dev/xvda device name > START THE EC2 instance
+
+DATA VOLUMES
+unencrypted volume > create snapshot > result: unencrypted snapshot > copy snapshot > toggle encryption settings > encrypted snapshot created > create volume from encrypted snapshot > result: new encrypted volume > unmount unencrypted volume., the command would be sudo umount /dev/xvdf > detach unencrypted volume > attach newly created encrypted volume > no need to edit fstab (as fstab entries are still valid if attachment is done on same device name) > execute sudo mount -a command
+
+Verify the mounting using lsblk command
+
+Restart httpd services
+
+Validate your application, which are now being served via encrypted volumes.
