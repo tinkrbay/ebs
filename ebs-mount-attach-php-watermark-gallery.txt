@@ -98,32 +98,5 @@ Name tag the AMI as php-watermark-gallery-1
 Name tag the corresponding snapshots as php-watermark-gallery-1
 
 
-NEW SCENARIO: Assuming that your Enterprise has laid out a new security policy to have all volumes encrypted
-
-Brief steps of encrypting an existing EBS data volume attached to an EC2 instance
-
-ROOT VOLUME:
-unencrypted ROOT volume > create snapshot > result: unencrypted snapshot > copy snapshot > toggle encryption settings > encrypted snapshot created > create volume from encrypted snapshot > result: new encrypted volume > STOP THE EC2 instance > detach unencrypted ROOT volume > attach newly created encrypted volume on /dev/xvda device name > START THE EC2 instance
-
-DATA VOLUMES
-
-unencrypted volume > create snapshot > result: unencrypted snapshot > copy snapshot > toggle encryption settings > encrypted snapshot created > create volume from encrypted snapshot > result: new encrypted volume > unmount unencrypted volume (the command would be sudo umount device-name-to-be-unmounted > detach unencrypted volume > attach newly created encrypted volume > no need to edit fstab (as fstab entries are still valid if attachment is done on same device name) > execute mount -a command
-
-
-AT THIS STAGE YOU WILL HAVE 
-
-1x8GiB unencrypted root volume in us-east-1a
-1x8GiB encrypted root volume in us-east-1a
-1x1GiB volumes (unencrypted) in us-east-1a
-1x1GiB volumes (encrypted) in us-east-1a
-
-In addition, you will have the below 6 snapshots. NOTE: SNAPSHOTS ARE AVAILABLE ACROSS THE ENTIRE REGION AS OPPOSED TO EBS VOLUMES WHICH ARE IN AZ.
-
-1x8GiB root volume snapshot (unencrypted) in us-east-1
-1x8GiB root volume snapshot (encrypted) in us-east-1
-1x1GiB snapshots (unencrypted) in us-east-1 
-1x1GiB snapshots (encrypted) in us-east-1 
-1x8GiB root volume snapshot for the unencrypted AMI
-1x1GiB snapshot for the unencrypted AMI
 
 
